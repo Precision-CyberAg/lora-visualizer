@@ -52,7 +52,7 @@ public class ZoomableScrollPane extends ScrollPane {
     public void onScroll(double wheelDelta, Point2D mousePoint) {
         double zoomFactor = Math.exp(wheelDelta * zoomIntensity);
         GraphPane graphPane = (GraphPane) target;
-        graphPane.getZoomCallback().onZoom(zoomFactor);
+//        graphPane.getZoomCallback().onZoom(zoomFactor);
         Bounds innerBounds = zoomNode.getLayoutBounds();
         Bounds viewportBounds = getViewportBounds();
 

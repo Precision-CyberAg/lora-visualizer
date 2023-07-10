@@ -7,15 +7,17 @@ import com.example.loravisualizer.model.events.MobilityTraceCourseChangeEvent;
 import com.example.loravisualizer.model.events.PhyEndDeviceStateChangeEvent;
 import com.example.loravisualizer.model.events.PhyTraceReceivedPacketEvent;
 import com.example.loravisualizer.model.events.PhyTraceStartSendingEvent;
-import javafx.application.Platform;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Point2D;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
-import javafx.scene.shape.Polygon;
 import javafx.scene.text.Text;
+import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,16 +25,11 @@ import java.util.TreeMap;
 
 public class GraphPane extends Pane {
 
-    TreeMap<String, String> packetUidMap;
-    GraphPane(ArrayList<Node> nodes) {
-        packetUidMap = new TreeMap<String, String>();
+    TreeMap<String, Node> packetUidMap;
+    GraphPane(ArrayList<Node> nodes, LoraTimeline loraTimeline, Timeline timeline) {
+        packetUidMap = new TreeMap<String, Node>();
         this.nodes = nodes;
-        heightProperty().addListener((observable, oldValue, newValue) -> {
-            generateGraph();
-        });
-        widthProperty().addListener((observable, oldValue, newValue) -> {
-            generateGraph();
-        });
+
         callback = new GraphPaneCallback() {
             @Override
             public boolean graphLinesIconClicked() {
@@ -80,136 +77,106 @@ public class GraphPane extends Pane {
                 return nodeIdVisible;
             }
         };
-        zoomCallback = zoomFactor -> generateGraph();
+
+//        zoomCallback = zoomFactor -> generateGraph();
         graphLabels = new ArrayList<>();
         graphLines = new ArrayList<>();
 
-        animationCallback = (time, interval) -> {
-            for(Node node: nodes){
-                new Thread(()->{
-                    for(Event event: node.getEvents()){
-                        if(event.getEventTime() <= time && event.getEventTime() >= (time - interval)){
-                            System.out.println("Time: "+time+"Event for: "+node.getNodeId()+", "+event.getClass());
-                            switch (event.getEventType()){
-                                case MOBILITY_TRACE_COURSE_CHANGE -> {
-                                    MobilityTraceCourseChangeEvent mobilityTraceCourseChangeEvent = (MobilityTraceCourseChangeEvent) event;
-                                    Node.NodePosition currentPos = mobilityTraceCourseChangeEvent.getCurrentPosition();
-                                    Platform.runLater(() -> node.setNodePosition(currentPos.getX(), currentPos.getY(), currentPos.getZ()));
+        this.timeline = timeline;
+        for(LoraTimeline.TimelineData timelineData: loraTimeline.getTimelineData()){
+            Duration keyFrameDuration = new Duration(timelineData.getEventTime()*1000);
+            KeyFrame keyFrame = new KeyFrame(keyFrameDuration, keyFrameEvent -> {
+                Event event = timelineData.getEvent();
+                Node node = timelineData.getNode();
+
+                switch (event.getEventType()){
+                    case PHY_END_DEVICE_STATE -> {
+                        PhyEndDeviceStateChangeEvent stateChangeEvent = (PhyEndDeviceStateChangeEvent) event;
+                            switch (stateChangeEvent.getCurrState()){
+                                case SLEEP -> {
+                                    node.changeNodeIconColor(Color.GREY);
                                 }
-                                case PHY_END_DEVICE_STATE -> {
-                                    PhyEndDeviceStateChangeEvent stateChangeEvent = (PhyEndDeviceStateChangeEvent) event;
-                                    Platform.runLater(() -> {
-                                        switch (stateChangeEvent.getCurrState()){
-                                            case SLEEP -> {
-                                                node.changeNodeIconColor(Color.GREY);
-                                            }
-                                            case RX -> {
-                                                node.changeNodeIconColor(Color.GREEN);
-                                            }
-                                            case STANDBY -> {
-                                                node.changeNodeIconColor(Color.YELLOW);
-                                            }
-                                            case TX -> {
-                                                node.changeNodeIconColor(Color.RED);
-                                            }
-                                        }
-                                    });
+                                case RX -> {
+                                    node.changeNodeIconColor(Color.GREEN);
                                 }
-                                case PHY_TRACE_START_SENDING -> {
-                                    Platform.runLater(() -> {
-                                        PhyTraceStartSendingEvent sendingEvent = (PhyTraceStartSendingEvent) event;
-                                        packetUidMap.put(sendingEvent.getPacketUid(), node.getNodeId());
-                                        node.showPacketStartSendingAnimation(sendingEvent.getPacketUid());
-                                    });
+                                case STANDBY -> {
+                                    node.changeNodeIconColor(Color.YELLOW);
                                 }
-                                case PHY_TRACE_RECEIVED_PACKET -> {
-                                    PhyTraceReceivedPacketEvent receivedPacketEvent = (PhyTraceReceivedPacketEvent) event;
-                                    String packetUid = receivedPacketEvent.getPacketUid();
-                                    String nodeId = packetUidMap.get(packetUid);
-                                    if(nodeId!=null){
-                                        showPacketReceivedAnimation(nodeId, node.getNodeId(), packetUid);
-                                    }
+                                case TX -> {
+                                    node.changeNodeIconColor(Color.RED);
                                 }
                             }
+                    }
+                    case PHY_TRACE_START_SENDING -> {
+                        PhyTraceStartSendingEvent sendingEvent = (PhyTraceStartSendingEvent) event;
+                        packetUidMap.put(sendingEvent.getPacketUid(), node);
+                        this.timeline.getKeyFrames().add(
+                                node.showPacketStartSendingAnimation(
+                                        sendingEvent.getPacketUid(),
+                                        keyFrameDuration));
+                    }
+                    case PHY_TRACE_RECEIVED_PACKET -> {
+                        PhyTraceReceivedPacketEvent receivedPacketEvent = (PhyTraceReceivedPacketEvent) event;
+                        String packetUid = receivedPacketEvent.getPacketUid();
+                        Node senderNode = packetUidMap.get(packetUid);
+                        if(senderNode!=null){
+                            this.timeline.getKeyFrames().add(
+                                    showPacketReceivedAnimation(
+                                            senderNode,
+                                            node,
+                                            packetUid,
+                                            keyFrameDuration)
+                            );
                         }
                     }
-                }).start();
+                    case MOBILITY_TRACE_COURSE_CHANGE -> {
+                        MobilityTraceCourseChangeEvent mobilityTraceCourseChangeEvent = (MobilityTraceCourseChangeEvent) event;
+                        Node.NodePosition currentPos = mobilityTraceCourseChangeEvent.getCurrentPosition();
+                        node.setNodePosition(currentPos.getX(), currentPos.getY(), currentPos.getZ());
+                    }
+                }
 
-            }
-        };
+            });
+            this.timeline.getKeyFrames().add(keyFrame);
+
+            play = new Button("PLAY");
+            play.setPrefHeight(100);
+            play.setPrefWidth(100);
+            play.setOnMouseClicked(event -> {
+
+                this.timeline.playFromStart();
+            });
+        }
+
+        generateGraph();
+
     }
 
-    private void showPacketReceivedAnimation(String senderNodeId, String receiverNodeId, String packetUid) {
-        Node senderNode = null, receiverNode = null;
-        for(Node node: nodes)
-            if(node.getNodeId().equals(senderNodeId)){
-                senderNode = node;
-                break;
-            }
-        for(Node node: nodes)
-            if(node.getNodeId().equals(receiverNodeId)){
-                receiverNode = node;
-                break;
-            }
-        if(senderNode !=null  || receiverNode != null){
+    Button play;
+
+    Timeline timeline;
+
+    private KeyFrame showPacketReceivedAnimation(Node senderNode, Node receiverNode, String packetUid, Duration keyFrameDuration) {
 
             Line line = new Line(senderNode.getLayoutX(), senderNode.getLayoutY(), receiverNode.getLayoutX(), receiverNode.getLayoutY());
             line.setStroke(Color.BLACK);
             line.setStrokeWidth(Node.defaultNodeIconRadius/5/this.getScaleX());
 
-            double angle = Math.atan2((receiverNode.getLayoutY() - senderNode.getLayoutY()), (receiverNode.getLayoutX() - senderNode.getLayoutX()));
-
-            double arrowLength = calculateLength(senderNode.getLayoutX(), senderNode.getLayoutY(), receiverNode.getLayoutX(), receiverNode.getLayoutY());
-
-            arrowLength = 36;
-            Polygon arrowTip = new Polygon(
-                    0, 0,
-                    arrowLength,
-                    -arrowLength/2,
-                    arrowLength,
-                    arrowLength/2
-            );
-
             Label label = new Label("R");
             label.setStyle("-fx-font-size: "+defaultLabelFontSize/getScaleX()+"px;");
 
-            arrowTip.setRotate(Math.toDegrees(-angle));
-            arrowTip.setTranslateX(line.getEndX());
-            arrowTip.setTranslateY(line.getEndY());
+            this.getChildren().add(line);
+            this.getChildren().add(label);
 
-            Platform.runLater(() -> {
-                this.getChildren().add(line);
-                this.getChildren().add(label);
-            });
-            new Thread(() -> {
-                try {
-                    Thread.sleep(1000);
-                    Platform.runLater(() -> {
-                        GraphPane.this.getChildren().remove(line);
-                        GraphPane.this.getChildren().remove(label);
-                    });
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }).start();
+        return new KeyFrame(new Duration(keyFrameDuration.toMillis()+1000), event -> {
 
-        }
+            this.getChildren().remove(line);
+            this.getChildren().remove(label);
+
+        });
+
     }
 
-    private static double calculateLength(double x1, double y1, double x2, double y2) {
-        // Calculate the horizontal and vertical differences
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-
-        // Calculate the square of the differences
-        double dxSquared = dx * dx;
-        double dySquared = dy * dy;
-
-        // Calculate the sum of the squares and take the square root
-        double length = Math.sqrt(dxSquared + dySquared);
-
-        return length;
-    }
     public double getScaledFont() {
         return defaultLabelFontSize / getScaleX();
     }
@@ -226,7 +193,7 @@ public class GraphPane extends Pane {
 
     private boolean nodeIdVisible = true;
 
-    private final GraphPaneZoomCallback zoomCallback;
+    private GraphPaneZoomCallback zoomCallback;
     private List<Line> graphLines;
     private List<Text> graphLabels;
     private ArrayList<Node> nodes;
@@ -240,7 +207,6 @@ public class GraphPane extends Pane {
     private double labelFontSize = 9;
     private Boolean graphLabelsVisible = true;
 
-    private AnimationCallback animationCallback;
 
     private void createLinesAndLabels(Pane parent, double space) {
         System.out.println("Space: " + space);
@@ -306,6 +272,8 @@ public class GraphPane extends Pane {
         createLinesAndLabels(this, space);
         System.out.println(space);
         getChildren().addAll(nodes);
+
+        getChildren().add(play);
         for (Node node : nodes)
             node.setGraphPaneScaleProperty(
                     scaleXProperty(),
@@ -318,13 +286,6 @@ public class GraphPane extends Pane {
         this.scrollPane = pane;
     }
 
-    public AnimationCallback getAnimationCallback() {
-        return animationCallback;
-    }
-
-    public interface AnimationCallback{
-        public void animateEvents(double time, double interval);
-    }
 
     public interface GraphPaneCallback {
         boolean graphLinesIconClicked();

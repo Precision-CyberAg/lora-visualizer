@@ -1,12 +1,14 @@
 package com.example.loravisualizer.model;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
+import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -80,34 +82,22 @@ public class Node extends Pane {
             nodeIdLabel.setVisible(b);
     }
 
-    public void showPacketStartSendingAnimation(String packetUidString) {
+    public KeyFrame showPacketStartSendingAnimation(String packetUidString, Duration keyFrameDuration) {
 
-        Platform.runLater(() -> {
-            packetUid.setText("PacketUid: "+packetUidString);
-            packetUid.setVisible(true);
-            new Thread(() -> {
-                try {
-                    Thread.sleep(1000);
-                    packetUid.setVisible(false);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }).start();
-        });
+        packetUid.setText("PacketUid: "+packetUidString);
+        packetUid.setVisible(true);
+
 
         nodeIconOuterCircle.setVisible(true);
         nodeIconOuterCircle2.setVisible(true);
 
+        Duration duration = new Duration(keyFrameDuration.toMillis()+1000);
 
-        new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-                nodeIconOuterCircle.setVisible(false);
-                nodeIconOuterCircle2.setVisible(false);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }).start();
+        return new KeyFrame(duration, event -> {
+            packetUid.setVisible(false);
+            nodeIconOuterCircle.setVisible(false);
+            nodeIconOuterCircle2.setVisible(false);
+        });
     }
 
 

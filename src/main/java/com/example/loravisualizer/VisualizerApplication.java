@@ -88,7 +88,13 @@ public class VisualizerApplication extends Application {
 
             LoraAnimationParser loraAnimationParser = new LoraAnimationParser(selectedFile);
             primaryStage.setScene(
-                    new LoraAnimator(loraAnimationParser.getNodes(), loraAnimationParser.getHighestX(), loraAnimationParser.getHighestY(), loraAnimationParser.getDuration())
+                    new LoraAnimator(
+                            loraAnimationParser.getNodes(),
+                            loraAnimationParser.getHighestX(),
+                            loraAnimationParser.getHighestY(),
+                            loraAnimationParser.getDuration(),
+                            loraAnimationParser.getLoraTimeline()
+                    )
             );
 
         } else {

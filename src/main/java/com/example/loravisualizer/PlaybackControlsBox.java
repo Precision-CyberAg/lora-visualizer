@@ -1,5 +1,6 @@
 package com.example.loravisualizer;
 
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -9,17 +10,22 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.util.Duration;
 
 public class PlaybackControlsBox extends HBox {
-    PlaybackControlsBox(LoraAnimator.PlayPauseTimer playPauseTimer){
-        this.playPauseTimer = playPauseTimer;
+    PlaybackControlsBox(Timeline timeline){
+
+        this.timeline = timeline;
         playImage = new Image("/images/play_icon.png",27,27,true,true);
         pauseImage = new Image("/images/pause_icon.png",27,27,true,true);
         generateBox();
+
     }
 
+    private Timeline timeline;
     private Image playImage, pauseImage;
-    private final LoraAnimator.PlayPauseTimer playPauseTimer;
+
+    private Boolean playbackStatus = false;
     boolean sliderDragHold = false;
     private void generateBox(){
 
@@ -36,16 +42,20 @@ public class PlaybackControlsBox extends HBox {
         playPauseImageView.setImage(playImage);
         playPauseImageView.setPickOnBounds(true);
         playPauseImageView.setOnMouseClicked(event -> {
-            if(playPauseTimer.isPaused()){
-                playPauseTimer.start();
+
+            if(!playbackStatus){
+                timeline.play();
                 playPauseImageView.setImage(pauseImage);
+                playbackStatus = true;
             }else{
-                playPauseTimer.pause();
+                timeline.pause();
                 playPauseImageView.setImage(playImage);
+                playbackStatus = false;
             }
+
         });
 
-        Slider slider = new Slider(0, playPauseTimer.getMaxDuration(), 0.0);
+        Slider slider = new Slider(0, timeline.getTotalDuration().toSeconds(), 0.0);
         slider.setShowTickMarks(true);
         slider.setShowTickLabels(true);
         slider.setMajorTickUnit(1);
@@ -56,19 +66,18 @@ public class PlaybackControlsBox extends HBox {
 
         slider.setOnMousePressed(event -> {
             sliderDragHold = true;
-            playPauseTimer.pause();
             playPauseImageView.setImage(playImage);
-            playPauseTimer.setTime(slider.getValue());
+            timeline.playFrom(new Duration(slider.getValue()*1000));
         });
 
         slider.setOnMouseReleased(event -> {
             sliderDragHold = false;
-            playPauseTimer.start();
+            timeline.play();
             playPauseImageView.setImage(pauseImage);
         });
 
         slider.setOnMouseDragged(event -> {
-            playPauseTimer.setTime(slider.getValue());
+            timeline.playFrom(new Duration(slider.getValue()*1000));
         });
 
 
@@ -79,30 +88,18 @@ public class PlaybackControlsBox extends HBox {
         Label currentDurationLabel = new Label("00.00");
         currentDurationLabel.setPadding(new Insets(6,0,6,6));
 
-        playPauseTimer.setTimeListener(new LoraAnimator.PlayPauseTimer.TimeListener() {
-            @Override
-            public void onTimeProgress(double time) {
-                double timeInSeconds = time/1000;
-                if(timeInSeconds <= playPauseTimer.getMaxDuration()){
-                    Platform.runLater(() -> {
-                        currentDurationLabel.setText(String.format("%." + 3 + "f", timeInSeconds));
-                        if(!sliderDragHold)
-                           slider.setValue(timeInSeconds);
-                    });
-                }else{
-                    playPauseTimer.reset();
-                    playPauseImageView.setImage(playImage);
-                }
+        timeline.currentTimeProperty().addListener((observable, oldValue, newValue) -> {
+
+            currentDurationLabel.setText(String.format("%." + 3 + "f", newValue.toSeconds()));
+            if(!sliderDragHold){
+                slider.setValue(newValue.toSeconds());
             }
         });
 
-        double maxDuration = playPauseTimer.getMaxDuration();
-        Label totalDurationLabel = new Label(String.valueOf(maxDuration));
+        Label totalDurationLabel = new Label(String.valueOf(timeline.getTotalDuration().toSeconds()));
         totalDurationLabel.setPadding(new Insets(6,6,6,0));
         sliderBoxPane.setLeft(currentDurationLabel);
         sliderBoxPane.setRight(totalDurationLabel);
-
-
 
 
         hBox.getChildren().add(playPauseImageView);
