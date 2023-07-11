@@ -2,10 +2,7 @@ package com.example.loravisualizer;
 
 import com.example.loravisualizer.model.Event;
 import com.example.loravisualizer.model.Node;
-import com.example.loravisualizer.model.events.MobilityTraceCourseChangeEvent;
-import com.example.loravisualizer.model.events.PhyEndDeviceStateChangeEvent;
-import com.example.loravisualizer.model.events.PhyTraceReceivedPacketEvent;
-import com.example.loravisualizer.model.events.PhyTraceStartSendingEvent;
+import com.example.loravisualizer.model.events.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -91,7 +88,7 @@ public class LoraAnimationParser {
                                     parseDeviceType(
                                             nodeJson.getString("DeviceType")
                                     ),
-                                   nodePosition
+                                   new Node.NodePosition(0,0,0)
                             );
 
                             int nodeIndex = nodes.indexOf(node);
@@ -134,6 +131,17 @@ public class LoraAnimationParser {
                                     node = node1;
                                 }
                             }
+
+                            Event endingEvent = new PhyTraceEndSendingEvent(
+                                    Event.EventType.PHY_TRACE_END_SENDING_EVENT,
+                                    Double.parseDouble(time)+Double.parseDouble(nodeJson.getString("Duration"))
+                            );
+
+                            loraTimeline.addToTimeline(new LoraTimeline.TimelineData(
+                                    endingEvent.getEventTime(),
+                                    node,
+                                    endingEvent
+                            ));
 
                         }
 

@@ -1,9 +1,6 @@
 package com.example.loravisualizer.model;
 
-import com.example.loravisualizer.model.events.MobilityTraceCourseChangeEvent;
-import com.example.loravisualizer.model.events.PhyEndDeviceStateChangeEvent;
-import com.example.loravisualizer.model.events.PhyTraceReceivedPacketEvent;
-import com.example.loravisualizer.model.events.PhyTraceStartSendingEvent;
+import com.example.loravisualizer.model.events.*;
 
 public class Event {
 
@@ -17,6 +14,7 @@ public class Event {
         MOBILITY_TRACE_COURSE_CHANGE(MobilityTraceCourseChangeEvent.class),
         PHY_END_DEVICE_STATE(PhyEndDeviceStateChangeEvent.class),
         PHY_TRACE_START_SENDING(PhyTraceStartSendingEvent.class),
+        PHY_TRACE_END_SENDING_EVENT(PhyTraceEndSendingEvent.class),
         PHY_TRACE_RECEIVED_PACKET(PhyTraceReceivedPacketEvent.class);
 
         private Class event;

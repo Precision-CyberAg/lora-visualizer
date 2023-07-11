@@ -92,7 +92,6 @@ public class VisualizerApplication extends Application {
                             loraAnimationParser.getNodes(),
                             loraAnimationParser.getHighestX(),
                             loraAnimationParser.getHighestY(),
-                            loraAnimationParser.getDuration(),
                             loraAnimationParser.getLoraTimeline()
                     )
             );

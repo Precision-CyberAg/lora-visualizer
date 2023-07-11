@@ -1,6 +1,7 @@
 package com.example.loravisualizer;
 
 import com.example.loravisualizer.model.Node;
+import javafx.animation.Animation;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
@@ -12,16 +13,18 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class LoraAnimator extends Scene{
-    public LoraAnimator(ArrayList<Node> nodes, double graphPaneWidth, double graphPaneHeight, double duration, LoraTimeline loraTimeline) {
-        super(createScene(nodes, graphPaneWidth, graphPaneHeight, duration, loraTimeline), 900,450);
+    public LoraAnimator(ArrayList<Node> nodes, double graphPaneWidth, double graphPaneHeight, LoraTimeline loraTimeline) {
+        super(createScene(nodes, graphPaneWidth, graphPaneHeight, loraTimeline), 900,450);
     }
 
     private static ArrayList<Node> nodes;
-    public static Parent createScene(ArrayList<Node> nodes, double graphPaneWidth, double graphPaneHeight, double duration, LoraTimeline loraTimeline){
+    public static Parent createScene(ArrayList<Node> nodes, double graphPaneWidth, double graphPaneHeight, LoraTimeline loraTimeline){
         LoraAnimator.nodes = nodes;
         BorderPane root = new BorderPane();
 
-        Timeline timeline = new Timeline();
+
+        AnimatorTimeline timeline = new AnimatorTimeline();
+
 
         GraphPane graphPane = new GraphPane(nodes, loraTimeline, timeline);
         graphPane.setPrefSize(graphPaneWidth,graphPaneHeight);
@@ -34,7 +37,7 @@ public class LoraAnimator extends Scene{
         PlaybackOptionsBox optionsBox = new PlaybackOptionsBox(graphPane.getCallback());
         root.setLeft(optionsBox);
 
-        PlaybackControlsBox controlsBox = new PlaybackControlsBox(timeline);
+        PlaybackControlsBox controlsBox = new PlaybackControlsBox(timeline, graphPane);
         root.setBottom(controlsBox);
 
 

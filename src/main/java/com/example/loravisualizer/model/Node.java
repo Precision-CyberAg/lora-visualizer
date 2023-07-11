@@ -1,7 +1,6 @@
 package com.example.loravisualizer.model;
 
 import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.control.Label;
@@ -23,6 +22,9 @@ public class Node extends Pane {
 
         this.setLayoutX(position.x);
         this.setLayoutY(position.y);
+
+
+
         this.nodeIdLabel = new Label(nodeId+", ("+position.x+", "+position.y+")");
 
         if(deviceType==DeviceType.END_DEVICE){
@@ -34,6 +36,9 @@ public class Node extends Pane {
         }
         Pane pane = new Pane();
         pane.getChildren().add(nodeIcon);
+
+
+
         nodeIconOuterCircle = new Circle(defaultNodeIconRadius*2, Color.BLACK);
         nodeIconOuterCircle.setVisible(false);
         nodeIconOuterCircle.setStrokeWidth(defaultNodeIconRadius/5);
@@ -55,16 +60,14 @@ public class Node extends Pane {
 
         pane.getChildren().add(packetUid);
 
-
-//        VBox vBox = new VBox();
-//        vBox.getChildren().add(pane);
-//        vBox.getChildren().add(nodeIdLabel);
         this.getChildren().add(pane);
         this.getChildren().add(nodeIdLabel);
     }
 
+
+
     public void changeNodeIconColor(Color color){
-        Platform.runLater(() -> ((Shape)this.nodeIcon).setFill(color));
+        ((Shape)this.nodeIcon).setFill(color);
     }
 
     private final Label packetUid;
@@ -82,7 +85,7 @@ public class Node extends Pane {
             nodeIdLabel.setVisible(b);
     }
 
-    public KeyFrame showPacketStartSendingAnimation(String packetUidString, Duration keyFrameDuration) {
+    public void showPacketStartSendingAnimation(String packetUidString) {
 
         packetUid.setText("PacketUid: "+packetUidString);
         packetUid.setVisible(true);
@@ -90,14 +93,12 @@ public class Node extends Pane {
 
         nodeIconOuterCircle.setVisible(true);
         nodeIconOuterCircle2.setVisible(true);
+    }
 
-        Duration duration = new Duration(keyFrameDuration.toMillis()+1000);
-
-        return new KeyFrame(duration, event -> {
-            packetUid.setVisible(false);
-            nodeIconOuterCircle.setVisible(false);
-            nodeIconOuterCircle2.setVisible(false);
-        });
+    public void hidePacketStartSendingAnimation(){
+        packetUid.setVisible(false);
+        nodeIconOuterCircle.setVisible(false);
+        nodeIconOuterCircle2.setVisible(false);
     }
 
 
@@ -207,6 +208,7 @@ public class Node extends Pane {
 
             nodeIconOuterCircle2.setRadius((defaultLabelFontSize*4)/ newValue.doubleValue());
             nodeIconOuterCircle2.setStrokeWidth(defaultNodeIconRadius/5/newValue.doubleValue());
+
 
             packetUid.setStyle("-fx-font-size: "+defaultLabelFontSize/newValue.doubleValue()+"px;");
         });

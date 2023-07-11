@@ -1,33 +1,36 @@
 package com.example.loravisualizer;
 
-import javafx.animation.Timeline;
-import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
 
 public class PlaybackControlsBox extends HBox {
-    PlaybackControlsBox(Timeline timeline){
+    PlaybackControlsBox(AnimatorTimeline timeline, GraphPane graphPane){
 
         this.timeline = timeline;
         playImage = new Image("/images/play_icon.png",27,27,true,true);
         pauseImage = new Image("/images/pause_icon.png",27,27,true,true);
-        generateBox();
+        generateBox(graphPane);
 
     }
 
-    private Timeline timeline;
+    private AnimatorTimeline timeline;
     private Image playImage, pauseImage;
 
     private Boolean playbackStatus = false;
     boolean sliderDragHold = false;
-    private void generateBox(){
+    private void generateBox(GraphPane graphPane){
 
         VBox vBox = new VBox();
 
@@ -55,6 +58,13 @@ public class PlaybackControlsBox extends HBox {
 
         });
 
+
+        BorderPane sliderBoxPane = new BorderPane();
+        sliderBoxPane.setCenter(sliderBox);
+
+        Label currentDurationLabel = new Label("00.00");
+        currentDurationLabel.setPadding(new Insets(6,0,6,6));
+
         Slider slider = new Slider(0, timeline.getTotalDuration().toSeconds(), 0.0);
         slider.setShowTickMarks(true);
         slider.setShowTickLabels(true);
@@ -65,36 +75,37 @@ public class PlaybackControlsBox extends HBox {
         sliderBox.getChildren().add(slider);
 
         slider.setOnMousePressed(event -> {
+            System.out.println("MOUSE pressed: "+slider.getValue());
             sliderDragHold = true;
-            playPauseImageView.setImage(playImage);
-            timeline.playFrom(new Duration(slider.getValue()*1000));
+            timeline.pause();
         });
 
         slider.setOnMouseReleased(event -> {
+            System.out.println("MOUSE released: "+slider.getValue());
             sliderDragHold = false;
-            timeline.play();
-            playPauseImageView.setImage(pauseImage);
+            graphPane.resetGraph();
+            timeline.playFrom(new Duration(slider.getValue()*1000));
+            if(playbackStatus){
+                timeline.play();
+            }else{
+                timeline.pause();
+            }
         });
 
         slider.setOnMouseDragged(event -> {
-            timeline.playFrom(new Duration(slider.getValue()*1000));
+            currentDurationLabel.setText(String.format("%." + 3 + "f", slider.getValue()));
         });
 
 
 
-        BorderPane sliderBoxPane = new BorderPane();
-        sliderBoxPane.setCenter(sliderBox);
 
-        Label currentDurationLabel = new Label("00.00");
-        currentDurationLabel.setPadding(new Insets(6,0,6,6));
-
-        timeline.currentTimeProperty().addListener((observable, oldValue, newValue) -> {
-
-            currentDurationLabel.setText(String.format("%." + 3 + "f", newValue.toSeconds()));
+        timeline.addListener((observable, oldValue, newValue) -> {
             if(!sliderDragHold){
+                currentDurationLabel.setText(String.format("%." + 3 + "f", newValue.toSeconds()));
                 slider.setValue(newValue.toSeconds());
             }
         });
+
 
         Label totalDurationLabel = new Label(String.valueOf(timeline.getTotalDuration().toSeconds()));
         totalDurationLabel.setPadding(new Insets(6,6,6,0));
@@ -103,6 +114,35 @@ public class PlaybackControlsBox extends HBox {
 
 
         hBox.getChildren().add(playPauseImageView);
+        Label playbackSpeedLabel = new Label();
+        playbackSpeedLabel.setText("1X");
+        playbackSpeedLabel.setStyle("-fx-font-size: 21px; -fx-font-weight: bold;");
+        playbackSpeedLabel.setOnMouseClicked(event -> {
+            switch (playbackSpeedLabel.getText()){
+                case "1X" -> {
+                    timeline.setRate(2);
+                    playbackSpeedLabel.setText("2X");
+                }
+                case "2X" -> {
+                    timeline.setRate(4);
+                    playbackSpeedLabel.setText("4X");
+                }
+                case "4X" -> {
+                    timeline.setRate(8);
+                    playbackSpeedLabel.setText("8X");
+                }
+                case "8X" -> {
+                    timeline.setRate(16);
+                    playbackSpeedLabel.setText("16X");
+                }
+                case "16X" ->{
+                    timeline.setRate(1);
+                    playbackSpeedLabel.setText("1X");
+                }
+            }
+        });
+
+        hBox.getChildren().add(playbackSpeedLabel);
 
 
         vBox.getChildren().add(sliderBoxPane);

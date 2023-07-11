@@ -3,15 +3,14 @@ package com.example.loravisualizer;
 
 import com.example.loravisualizer.model.Event;
 import com.example.loravisualizer.model.Node;
-import com.example.loravisualizer.model.events.MobilityTraceCourseChangeEvent;
-import com.example.loravisualizer.model.events.PhyEndDeviceStateChangeEvent;
-import com.example.loravisualizer.model.events.PhyTraceReceivedPacketEvent;
-import com.example.loravisualizer.model.events.PhyTraceStartSendingEvent;
+import com.example.loravisualizer.model.events.*;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.geometry.Point2D;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 
 import javafx.scene.paint.Color;
@@ -26,9 +25,15 @@ import java.util.TreeMap;
 public class GraphPane extends Pane {
 
     TreeMap<String, Node> packetUidMap;
-    GraphPane(ArrayList<Node> nodes, LoraTimeline loraTimeline, Timeline timeline) {
+    TreeMap<String, Line> removableLines;
+
+    TreeMap<String, Label> removableLabels;
+
+    GraphPane(ArrayList<Node> nodes, LoraTimeline loraTimeline, AnimatorTimeline timeline) {
         packetUidMap = new TreeMap<String, Node>();
         this.nodes = nodes;
+        this.removableLines = new TreeMap<>();
+        this.removableLabels = new TreeMap<>();
 
         callback = new GraphPaneCallback() {
             @Override
@@ -78,7 +83,6 @@ public class GraphPane extends Pane {
             }
         };
 
-//        zoomCallback = zoomFactor -> generateGraph();
         graphLabels = new ArrayList<>();
         graphLines = new ArrayList<>();
 
@@ -110,11 +114,14 @@ public class GraphPane extends Pane {
                     case PHY_TRACE_START_SENDING -> {
                         PhyTraceStartSendingEvent sendingEvent = (PhyTraceStartSendingEvent) event;
                         packetUidMap.put(sendingEvent.getPacketUid(), node);
-                        this.timeline.getKeyFrames().add(
-                                node.showPacketStartSendingAnimation(
-                                        sendingEvent.getPacketUid(),
-                                        keyFrameDuration));
+                        node.showPacketStartSendingAnimation(
+                                        sendingEvent.getPacketUid());
                     }
+
+                    case PHY_TRACE_END_SENDING_EVENT -> {
+                        node.hidePacketStartSendingAnimation();
+                    }
+
                     case PHY_TRACE_RECEIVED_PACKET -> {
                         PhyTraceReceivedPacketEvent receivedPacketEvent = (PhyTraceReceivedPacketEvent) event;
                         String packetUid = receivedPacketEvent.getPacketUid();
@@ -133,28 +140,22 @@ public class GraphPane extends Pane {
                         MobilityTraceCourseChangeEvent mobilityTraceCourseChangeEvent = (MobilityTraceCourseChangeEvent) event;
                         Node.NodePosition currentPos = mobilityTraceCourseChangeEvent.getCurrentPosition();
                         node.setNodePosition(currentPos.getX(), currentPos.getY(), currentPos.getZ());
+
                     }
                 }
 
             });
             this.timeline.getKeyFrames().add(keyFrame);
 
-            play = new Button("PLAY");
-            play.setPrefHeight(100);
-            play.setPrefWidth(100);
-            play.setOnMouseClicked(event -> {
 
-                this.timeline.playFromStart();
-            });
         }
 
-        generateGraph();
+        resetGraph();
 
     }
 
-    Button play;
 
-    Timeline timeline;
+    AnimatorTimeline timeline;
 
     private KeyFrame showPacketReceivedAnimation(Node senderNode, Node receiverNode, String packetUid, Duration keyFrameDuration) {
 
@@ -185,15 +186,11 @@ public class GraphPane extends Pane {
         return callback;
     }
 
-    public GraphPaneZoomCallback getZoomCallback() {
-        return zoomCallback;
-    }
 
     private final GraphPaneCallback callback;
 
     private boolean nodeIdVisible = true;
 
-    private GraphPaneZoomCallback zoomCallback;
     private List<Line> graphLines;
     private List<Text> graphLabels;
     private ArrayList<Node> nodes;
@@ -259,26 +256,37 @@ public class GraphPane extends Pane {
     private Text createLabel(String text, double x, double y) {
         Text label = new Text(x, y, text);
         label.setStyle("-fx-font-size: " + defaultLabelFontSize / getScaleX() + "px; -fx-font-weight: bold;");
+        scaleXProperty().addListener((observable, oldValue, newValue) -> {
+            label.setStyle("-fx-font-size: " + defaultLabelFontSize / newValue.doubleValue() + "px; -fx-font-weight: bold;");
+        });
         label.setVisible(graphLabelsVisible);
         graphLabels.add(label);
         return label;
     }
 
-    public void generateGraph() {
+    public void resetGraph() {
         getChildren().clear();
         graphLines.clear();
         graphLabels.clear();
-        System.out.println("Graph reset!!!");
-        createLinesAndLabels(this, space);
-        System.out.println(space);
+        Platform.runLater(() -> {
+            createLinesAndLabels(GraphPane.this, space);
+        });
         getChildren().addAll(nodes);
 
-        getChildren().add(play);
-        for (Node node : nodes)
+        for (Node node : nodes){
+            node.changeNodeIconColor(Color.GREY);
+            node.hidePacketStartSendingAnimation();
+            node.setNodePosition(0,0,0);
             node.setGraphPaneScaleProperty(
                     scaleXProperty(),
                     defaultLabelFontSize
             );
+        }
+
+
+        Image image = new Image("/images/end_device_icon.png",27,27,true,true);
+        ImageView imageView = new ImageView(image);
+        getChildren().add(imageView);
 
     }
 
@@ -299,7 +307,4 @@ public class GraphPane extends Pane {
         boolean iDClicked();
     }
 
-    public interface GraphPaneZoomCallback {
-        void onZoom(double zoomFactor);
-    }
 }
