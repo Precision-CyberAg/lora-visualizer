@@ -21,7 +21,32 @@ public class VisualizerApplication extends Application {
 //        System.setProperty("prism.order", "es2");
 
         BorderPane root = new BorderPane();
-        root.setTop(getMenuBar(stage));
+        root.setTop(MenuBarManager.createMenuBar());
+
+
+
+        MenuBarManager.addMenuBarListener(new MenuBarManager.MenuBarListener() {
+            @Override
+            public void onFileLoadItemClicked() {
+                openFileChooser(stage);
+            }
+
+            @Override
+            public void onExitItemClicked() {
+                System.exit(0);
+            }
+
+            @Override
+            public void onLiveLogItemClicked(boolean isSelected) {
+                if(isSelected)
+                    LiveLogBox.getLogBox().show();
+                else
+                    LiveLogBox.getLogBox().hide();
+            }
+        });
+
+
+
         Scene scene = new Scene(root);
 
         VBox vbox = new VBox();
@@ -54,28 +79,6 @@ public class VisualizerApplication extends Application {
         stage.setTitle("Lora Visualizer");
         stage.setScene(scene);
         stage.show();
-    }
-
-    public MenuBar getMenuBar(Stage primaryStage){
-
-        MenuBar menuBar = new MenuBar();
-        menuBar.setUseSystemMenuBar(true);
-
-        Menu fileMenu = new Menu("File");
-        MenuItem m1 = new MenuItem("Load File");
-        m1.setOnAction(event -> {
-           openFileChooser(primaryStage);
-        });
-        MenuItem m2 = new MenuItem("Exit");
-        m2.setOnAction(event -> {
-            System.exit(0);
-        });
-
-        fileMenu.getItems().add(m1);
-        fileMenu.getItems().add(m2);
-        menuBar.getMenus().add(fileMenu);
-
-        return menuBar;
     }
 
     public void openFileChooser(Stage primaryStage){

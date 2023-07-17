@@ -3,6 +3,7 @@ package com.example.loravisualizer;
 import com.example.loravisualizer.model.Node;
 import javafx.animation.Animation;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -14,7 +15,7 @@ import java.util.TimerTask;
 
 public class LoraAnimator extends Scene{
     public LoraAnimator(ArrayList<Node> nodes, double graphPaneWidth, double graphPaneHeight, LoraTimeline loraTimeline) {
-        super(createScene(nodes, graphPaneWidth, graphPaneHeight, loraTimeline), 900,450);
+        super(createScene(nodes, graphPaneWidth, graphPaneHeight, loraTimeline), 900,700);
     }
 
     private static ArrayList<Node> nodes;
@@ -39,6 +40,8 @@ public class LoraAnimator extends Scene{
 
         PlaybackControlsBox controlsBox = new PlaybackControlsBox(timeline, graphPane);
         root.setBottom(controlsBox);
+
+        root.setTop(MenuBarManager.createMenuBar());
 
 
         return root;

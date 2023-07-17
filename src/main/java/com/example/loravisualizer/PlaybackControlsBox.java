@@ -84,6 +84,7 @@ public class PlaybackControlsBox extends HBox {
             System.out.println("MOUSE released: "+slider.getValue());
             sliderDragHold = false;
             graphPane.resetGraph();
+            LiveLogBox.resetLog();
             timeline.playFrom(new Duration(slider.getValue()*1000));
             if(playbackStatus){
                 timeline.play();

@@ -135,7 +135,7 @@ public class LoraAnimationParser {
                             Event endingEvent = new PhyTraceEndSendingEvent(
                                     Event.EventType.PHY_TRACE_END_SENDING_EVENT,
                                     Double.parseDouble(time)+Double.parseDouble(nodeJson.getString("Duration"))
-                            );
+                                    ,nodeJson.getString("PacketUid"));
 
                             loraTimeline.addToTimeline(new LoraTimeline.TimelineData(
                                     endingEvent.getEventTime(),
@@ -154,6 +154,49 @@ public class LoraAnimationParser {
                                 if(node1.getNodeId().equals(nodeId)){
                                     node = node1;
                                 }
+                            }
+                        }
+
+                        case "TxRxPointToPoint" -> {
+                            for(Node node1: nodes){
+                                if(node1.getNodeId().equals(nodeId)){
+                                    node = node1;
+                                }
+                            }
+                            String sender =  nodeJson.getString("Sender");
+                            String receiver = nodeJson.getString("Receiver");
+
+                            if(nodeId.equals(sender)){
+                                event = new TxStartPointToPointEvent(
+                                        Event.EventType.TX_START_POINT_TO_POINT,
+                                        Double.parseDouble(time),
+                                        nodeJson.getDouble("Duration"),
+                                        sender,
+                                        receiver
+                                );
+
+                                Event event1 = new TxEndPointToPointEvent(
+                                  Event.EventType.TX_END_POINT_TO_POINT,
+                                  Double.parseDouble(time)+1+(nodeJson.getDouble("Duration")/1000),
+                                  nodeJson.getDouble("Duration"),
+                                  sender,
+                                  receiver
+                                );
+
+                                loraTimeline.addToTimeline(new LoraTimeline.TimelineData(
+                                        event1.getEventTime(),
+                                        node,
+                                        event1
+                                ));
+
+                            }else{
+                                event = new RxPointToPointEvent(
+                                        Event.EventType.RX_POINT_TO_POINT,
+                                        Double.parseDouble(time),
+                                        nodeJson.getDouble("Duration"),
+                                        sender,
+                                        receiver
+                                );
                             }
                         }
                     }
@@ -211,6 +254,9 @@ public class LoraAnimationParser {
             }
             case "Gateway" -> {
                 return Node.DeviceType.GATEWAY_DEVICE;
+            }
+            case "NetworkServer" -> {
+                return Node.DeviceType.NETWORK_SERVER;
             }
         }
         throw new RuntimeException("Unspecified device type");

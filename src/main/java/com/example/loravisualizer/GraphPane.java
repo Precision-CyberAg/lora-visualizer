@@ -5,7 +5,6 @@ import com.example.loravisualizer.model.Event;
 import com.example.loravisualizer.model.Node;
 import com.example.loravisualizer.model.events.*;
 import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.scene.control.Label;
@@ -96,9 +95,10 @@ public class GraphPane extends Pane {
                 switch (event.getEventType()){
                     case PHY_END_DEVICE_STATE -> {
                         PhyEndDeviceStateChangeEvent stateChangeEvent = (PhyEndDeviceStateChangeEvent) event;
+                        LiveLogBox.appendLog(event.getEventTime(),event.getEventType(),node.getDeviceType()+" "+node.getNodeId()+" state Changed from "+((PhyEndDeviceStateChangeEvent) event).getPrevState()+" to "+((PhyEndDeviceStateChangeEvent) event).getCurrState());
                             switch (stateChangeEvent.getCurrState()){
                                 case SLEEP -> {
-                                    node.changeNodeIconColor(Color.GREY);
+                                    node.changeNodeIconColor(Color.TRANSPARENT);
                                 }
                                 case RX -> {
                                     node.changeNodeIconColor(Color.GREEN);
@@ -113,16 +113,19 @@ public class GraphPane extends Pane {
                     }
                     case PHY_TRACE_START_SENDING -> {
                         PhyTraceStartSendingEvent sendingEvent = (PhyTraceStartSendingEvent) event;
+                        LiveLogBox.appendLog(event.getEventTime(), event.getEventType(), node.getDeviceType()+" "+node.getNodeId()+" started transmission for packet, "+((PhyTraceStartSendingEvent) event).getPacketUid());
                         packetUidMap.put(sendingEvent.getPacketUid(), node);
                         node.showPacketStartSendingAnimation(
                                         sendingEvent.getPacketUid());
                     }
 
                     case PHY_TRACE_END_SENDING_EVENT -> {
+                        LiveLogBox.appendLog(event.getEventTime(), event.getEventType(), node.getDeviceType()+" "+node.getNodeId()+" ended transmission for packet, "+((PhyTraceEndSendingEvent) event).getPacketUid());
                         node.hidePacketStartSendingAnimation();
                     }
 
                     case PHY_TRACE_RECEIVED_PACKET -> {
+                        LiveLogBox.appendLog(event.getEventTime(), event.getEventType(), node.getDeviceType()+" "+node.getNodeId()+" received packet, "+((PhyTraceReceivedPacketEvent) event).getPacketUid());
                         PhyTraceReceivedPacketEvent receivedPacketEvent = (PhyTraceReceivedPacketEvent) event;
                         String packetUid = receivedPacketEvent.getPacketUid();
                         Node senderNode = packetUidMap.get(packetUid);
@@ -142,11 +145,41 @@ public class GraphPane extends Pane {
                         node.setNodePosition(currentPos.getX(), currentPos.getY(), currentPos.getZ());
 
                     }
+                    case TX_START_POINT_TO_POINT -> {
+                        LiveLogBox.appendLog(event.getEventTime(), event.getEventType(), node.getDeviceType()+" "+node.getNodeId()+" sent packet, "+"0000");
+                        TxStartPointToPointEvent sendingEvent = (TxStartPointToPointEvent) event;
+                        node.showPacketStartSendingAnimation("00000");
+                    }
+
+                    case TX_END_POINT_TO_POINT -> {
+                        node.hidePacketStartSendingAnimation();
+                    }
+
+                    case RX_POINT_TO_POINT -> {
+                        LiveLogBox.appendLog(event.getEventTime(), event.getEventType(), node.getDeviceType()+" "+node.getNodeId()+" received packet, "+"0000");
+                        RxPointToPointEvent rxPointToPointEvent = (RxPointToPointEvent) event;
+                        Node senderNode = null;
+                        for(Node node1: nodes){
+                            if(rxPointToPointEvent.getSenderId().equals(node1.getNodeId())){
+                                senderNode = node1;
+                                break;
+                            }
+                        }
+                        if(senderNode!=null){
+                            this.timeline.getKeyFrames().add(
+                                    showPacketReceivedAnimation(
+                                            senderNode,
+                                            node,
+                                            "0000",
+                                            keyFrameDuration)
+                            );
+                        }
+
+                    }
                 }
 
             });
             this.timeline.getKeyFrames().add(keyFrame);
-
 
         }
 
@@ -274,7 +307,7 @@ public class GraphPane extends Pane {
         getChildren().addAll(nodes);
 
         for (Node node : nodes){
-            node.changeNodeIconColor(Color.GREY);
+            node.changeNodeIconColor(Color.TRANSPARENT);
             node.hidePacketStartSendingAnimation();
             node.setNodePosition(0,0,0);
             node.setGraphPaneScaleProperty(
@@ -284,9 +317,9 @@ public class GraphPane extends Pane {
         }
 
 
-        Image image = new Image("/images/end_device_icon.png",27,27,true,true);
-        ImageView imageView = new ImageView(image);
-        getChildren().add(imageView);
+//        Image image = new Image("/images/end_device_icon.png",27,27,true,true);
+//        ImageView imageView = new ImageView(image);
+//        getChildren().add(imageView);
 
     }
 

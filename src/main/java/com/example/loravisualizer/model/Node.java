@@ -1,12 +1,16 @@
 package com.example.loravisualizer.model;
 
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
@@ -27,15 +31,26 @@ public class Node extends Pane {
 
         this.nodeIdLabel = new Label(nodeId+", ("+position.x+", "+position.y+")");
 
-        if(deviceType==DeviceType.END_DEVICE){
-            nodeIcon = new Circle(defaultNodeIconRadius, Color.GREY);
-        }else if(deviceType==DeviceType.GATEWAY_DEVICE){
-            nodeIcon = new Rectangle(defaultNodeWidth, defaultNodeHeight, Color.GREY);
-        }else{
-            nodeIcon = new Circle(defaultNodeIconRadius, Color.RED);
-        }
+        nodeIcon = new Circle(defaultNodeIconRadius);
+        nodeIcon.setStroke(Color.BLACK);
+        nodeIcon.setStrokeWidth(1);
+        nodeIcon.setFill(Color.TRANSPARENT);
+
         Pane pane = new Pane();
         pane.getChildren().add(nodeIcon);
+
+        deviceTypeText = new Text(deviceType.toString());
+        deviceTypeText.setLayoutX(nodeIcon.getLayoutX()-(2*defaultNodeIconRadius));
+        deviceTypeText.setLayoutY(nodeIcon.getLayoutY()+(2*defaultNodeIconRadius));
+
+        switch (deviceType){
+            case END_DEVICE -> deviceTypeText.setText("ED");
+            case GATEWAY_DEVICE -> deviceTypeText.setText("GW");
+            case NETWORK_SERVER -> deviceTypeText.setText("NS");
+        }
+
+        deviceTypeText.setFont(Font.font("Arial", defaultLabelFontSize));
+        pane.getChildren().add(deviceTypeText);
 
 
 
@@ -62,8 +77,8 @@ public class Node extends Pane {
 
         this.getChildren().add(pane);
         this.getChildren().add(nodeIdLabel);
-    }
 
+    }
 
 
     public void changeNodeIconColor(Color color){
@@ -72,11 +87,14 @@ public class Node extends Pane {
 
     private final Label packetUid;
     private final Label nodeIdLabel;
-    private final javafx.scene.Node nodeIcon;
+    private final Circle nodeIcon;
+
+    private final Text deviceTypeText;
 
     private final Circle nodeIconOuterCircle, nodeIconOuterCircle2;
 
-    public static final double defaultNodeIconRadius = 5;
+    public static final double defaultNodeIconRadius = 9;
+    private double defaultLabelFontSize = 9;
 
     private final double defaultNodeHeight = 10;
     private final double defaultNodeWidth = 10;
@@ -191,17 +209,11 @@ public class Node extends Pane {
     }
     public void setGraphPaneScaleProperty(DoubleProperty val, double defaultLabelFontSize){
         val.addListener((observable, oldValue, newValue) -> {
-            switch (deviceType){
-                case END_DEVICE -> {
-                    ((Circle)nodeIcon).setRadius(defaultNodeIconRadius/newValue.doubleValue());
 
+            ((Circle)nodeIcon).setRadius(defaultNodeIconRadius/newValue.doubleValue());
 
-                }
-                case GATEWAY_DEVICE -> {
-                    ((Rectangle)nodeIcon).setHeight(defaultNodeHeight/newValue.doubleValue());
-                    ((Rectangle)nodeIcon).setWidth(defaultNodeWidth/newValue.doubleValue());
-                }
-            }
+            nodeIcon.setStrokeWidth(1/newValue.doubleValue());
+
             nodeIdLabel.setStyle("-fx-font-size: "+defaultLabelFontSize/newValue.doubleValue()+"px;");
             nodeIconOuterCircle.setRadius((defaultNodeIconRadius*2)/newValue.doubleValue());
             nodeIconOuterCircle.setStrokeWidth(defaultNodeIconRadius/5/newValue.doubleValue());
@@ -209,7 +221,10 @@ public class Node extends Pane {
             nodeIconOuterCircle2.setRadius((defaultLabelFontSize*4)/ newValue.doubleValue());
             nodeIconOuterCircle2.setStrokeWidth(defaultNodeIconRadius/5/newValue.doubleValue());
 
+            deviceTypeText.setLayoutX(nodeIcon.getLayoutX()-(nodeIcon.getRadius()/2));
+            deviceTypeText.setLayoutY(nodeIcon.getLayoutY()+(nodeIcon.getRadius()/2));
 
+            deviceTypeText.setStyle("-fx-font-size: "+defaultLabelFontSize/newValue.doubleValue()+"px;");
             packetUid.setStyle("-fx-font-size: "+defaultLabelFontSize/newValue.doubleValue()+"px;");
         });
     }

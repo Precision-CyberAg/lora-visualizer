@@ -31,18 +31,18 @@ public class AnimatorTimeline {
         double skipRate = (duration.toMillis()/timeline.getTotalDuration().toMillis())*1000;
         timeline.stop();
         timeline.setRate(skipRate);
-        timeline.currentTimeProperty().addListener(new ChangeListener<Duration>() {
+        timeline.currentTimeProperty().addListener(new ChangeListener<>() {
             @Override
             public void changed(ObservableValue<? extends Duration> observable, Duration oldValue, Duration newValue) {
-                System.out.println("new Val: "+newValue+"\tdur: "+duration);
-                if(newValue.greaterThanOrEqualTo(duration)){
+                System.out.println("new Val: " + newValue + "\tdur: " + duration);
+                if (newValue.greaterThanOrEqualTo(duration)) {
                     timeline.pause();
                     timeline.setRate(playbackRate);
                     timeline.play();
                     timeline.currentTimeProperty().removeListener(this);
                     return;
                 }
-                timeline.setRate(Math.max(playbackRate, (1-(newValue.toMillis()/duration.toMillis()))*skipRate));
+                timeline.setRate(Math.max(playbackRate, (1 - (newValue.toMillis() / duration.toMillis())) * skipRate));
             }
         });
         timeline.play();

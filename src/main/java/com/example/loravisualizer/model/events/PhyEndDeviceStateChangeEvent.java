@@ -13,6 +13,10 @@ public class PhyEndDeviceStateChangeEvent extends Event {
     private final Node.NodeState prevState;
     private final Node.NodeState currState;
 
+    public Node.NodeState getPrevState() {
+        return prevState;
+    }
+
     public Node.NodeState getCurrState() {
         return currState;
     }
